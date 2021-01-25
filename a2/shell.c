@@ -9,6 +9,7 @@
 
 #define BUFF_SIZE 1024
 #define MAX_PIPE 100
+#define MAXLIST 100
 #define MAX_FILENAME_LENGTH 15
 
 struct parsed_command{
@@ -96,6 +97,40 @@ struct parsed_command* parse_command(char* command){
     }
     return command_data;
 }
+void parseSpace(char* str, char** parsed) 
+{ 
+	int i; 
+
+	for (i = 0; i < MAXLIST; i++) { 
+		parsed[i] = strsep(&str, " "); 
+
+		if (parsed[i] == NULL) 
+			break; 
+		if (strlen(parsed[i]) == 0) 
+			i--; 
+	} 
+} 
+void execArgs(char* str) 
+{
+    char *parsed[MAXLIST];
+    parseSpace(str, parsed);
+	// Forking a child 
+	pid_t pid = fork(); 
+
+	if (pid == -1) { 
+		printf("\nFailed forking child.."); 
+		return; 
+	} else if (pid == 0) { 
+		if (execvp(parsed[0], parsed) < 0) { 
+			printf("\nCould not execute command \'%s\'",parsed[0]); 
+		} 
+		exit(0); 
+	} else { 
+		// waiting for child to terminate 
+		wait(NULL); 
+		return; 
+	} 
+} 
 
 int main(){
     char *command;
@@ -112,6 +147,9 @@ int main(){
         printf("number of pipes is $%d$\n", command_data->pipes);
         for(int i = 0; i < command_data->pipes; i++)
             printf("pipe $%d$ is $%s$\n", i, command_data->pipe_command_arr[i]);
+        if(command_data->pipes==1){
+            execArgs(command_data->pipe_command_arr[0]);
+        }
     }
     return 0;
 }

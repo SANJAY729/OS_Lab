@@ -33,10 +33,16 @@ void initialize(){
     printf("#Absence of input/output file(s) will result in stdin/stdout being used        #\n");
     printf("################################################################################\n");
 }
-
+void printDir() 
+{ 
+	char cwd[1024]; 
+	getcwd(cwd, sizeof(cwd)); 
+	printf("\n~%s$", cwd); 
+} 
 char* read_command(){
     char *buffer = (char*)malloc(sizeof(char) * BUFF_SIZE);
-    buffer  = readline("\n$");
+    printDir();
+    buffer  = readline(" ");
     if(strlen(buffer) != 0)
         add_history(buffer);
     return buffer;

@@ -225,8 +225,55 @@ void execArgs_input_output(char* str, char* input_file, char* output_file, int b
     dup2(saved_stdin,0);
 }
 
-void execArgs_pipe(char** pipes, char* input_file, char* output_file,int append){
-
+void execArgs_pipe(char** pipes, int num_pipes,char* input_file, char* output_file,int bg,int append)
+{
+	int fd[2];
+	pid_t pid;
+	int fdinp = 0,fdout=1;				/* Backup */
+    int i=0;
+    if (strlen(input_file)!=0){
+        fdinp=open(input_file, O_RDONLY);
+        if(fdinp<0){
+            printf("Input File could not be opened");
+            return;
+        }
+    }
+    if (strlen(output_file)!=0){
+        if(append){
+            fdout = open(output_file, O_WRONLY | O_APPEND);
+        }
+        else
+            fdout = open(output_file, O_WRONLY | O_TRUNC | O_CREAT, S_IRUSR | S_IRGRP | S_IWGRP | S_IWUSR);
+        if(fdout<0){
+            printf("Output File could not be opened");
+            return;
+        }
+    }
+	while (i<num_pipes) {
+		pipe(fd);				/* Sharing bidiflow */
+		if ((pid = fork()) == -1) {
+			perror("fork");
+			exit(1);
+		}
+		else if (pid == 0) {
+			dup2(fdinp, 0);
+			if (i!=num_pipes-1) {
+				dup2(fd[1], 1);
+			}
+            else{
+                dup2(fdout,1);
+            }
+			close(fd[0]);
+			execArgs(pipes[i],bg);
+			exit(1);
+		}
+		else {
+			wait(NULL); 		/* Collect childs */
+			close(fd[1]);
+			fdinp = fd[0];
+			i++;
+		}
+	}
 }
 
 int main(){
@@ -258,7 +305,7 @@ int main(){
         else if(command_data->pipes == 1 && strlen(command_data->input_file) != 0 && strlen(command_data->output_file) != 0)
             execArgs_input_output(command_data->pipe_command_arr[0],command_data->input_file,command_data->output_file,command_data->background,command_data->append);
         else
-            execArgs_pipe(command_data->pipe_command_arr,command_data->input_file,command_data->output_file,command_data->append);
+            execArgs_pipe(command_data->pipe_command_arr,command_data->pipes,command_data->input_file,command_data->output_file,command_data->background, command_data->append);
         free(command_data);
     }
     return 0;

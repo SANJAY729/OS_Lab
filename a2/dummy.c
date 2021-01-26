@@ -9,6 +9,8 @@ int main(){
     printf("%s\n",v);
     char * x  =  v+3;
     printf("%s\n", x);
+    char s[100] = "   hello vamshi   ";
+    printf("%s\n",strstrip(s));
     return 0;
 }
 

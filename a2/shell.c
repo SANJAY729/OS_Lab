@@ -178,7 +178,6 @@ void execArgs(char* str,int bg){
 	}
     if(bg==0)
         waitpid(pid,NULL,0);
-        //wait(NULL);                                                 REPLACING ABOVE THINGY WITH THIS DOESNT WORK WHY????
     else
         printf("Process created with PID: %d\n",pid);
 } 

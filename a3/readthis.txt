@@ -1,0 +1,6 @@
+thread.h goes in pintos/src/threads
+timer.c goes in pintos/src/device
+
+for changes wrt original search for '//dhar'
+
+if making any changes do the same

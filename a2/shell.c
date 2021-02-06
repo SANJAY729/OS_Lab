@@ -277,7 +277,8 @@ void execArgs_pipe(char** pipes, int num_pipes,char* input_file, char* output_fi
 			exit(1);
 		}
 		else {
-			wait(NULL); 		/* Collect childs */
+			waitpid(pid,NULL,0); 		/* Collect childs */
+            //wait(NULL);
 			close(fd[1]);
 			fdinp = fd[0];
 			i++;

@@ -1,6 +1,5 @@
-thread.h goes in pintos/src/threads
-timer.c goes in pintos/src/devices
+shutdown in devices
+threads.h,.c in threads
+timer.c in devices
 
-for changes wrt original search for '//dhar'
-
-if making any changes do the same
+//change to find changes wrt original

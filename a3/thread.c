@@ -164,27 +164,44 @@ thread_print_stats (void)
    PRIORITY, but no actual priority scheduling is implemented.
    Priority scheduling is the goal of Problem 1-3. */
 
-void thread_sleep(int64_t ticks){
+//change
+
+void thread_sleep(int64_t ticks)
+{
   ASSERT (intr_get_level () == INTR_ON);
   enum intr_level old_level = intr_disable ();
   thread_current() -> wake_up_tick = timer_ticks () + ticks;
-  list_push_back (&sleeping_thread_list, &thread_current ()->elem);
+  list_insert_ordered (&sleeping_thread_list, &thread_current ()->elem, compare_wake_up_tick, NULL);
   thread_block ();
   intr_set_level (old_level);
 }
 
-void thread_wake(int64_t ticks){
+void thread_wake(int64_t ticks)
+{
   struct list_elem *e;
   for (e = list_begin (&sleeping_thread_list); e != list_end (&sleeping_thread_list); ) {
     struct thread *temp = list_entry (e, struct thread, elem);      
     if (ticks >= temp->wake_up_tick) {
       e = list_remove (e);
       thread_unblock (temp);
-    } 
+    }
     else
-      e = list_next (e);
+      break;
   }
 }
+
+bool 
+compare_wake_up_tick(const struct list_elem * elem1, const struct list_elem * elem2, void * _)
+{
+  struct thread * temp1 = list_entry(elem1, struct thread, elem);
+  struct thread * temp2 = list_entry(elem2, struct thread, elem);
+  if (temp1->wake_up_tick<temp2->wake_up_tick)
+    return true;
+  return false;
+}
+
+//change
+
 tid_t
 thread_create (const char *name, int priority,
                thread_func *function, void *aux) 

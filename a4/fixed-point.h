@@ -2,8 +2,8 @@
 #define THREADS_FIXED_POINT_H
 
 #define FIX_BITS 32
-#define FIX_P 16   
-#define FIX_Q 16               
+#define FIX_P 14   
+#define FIX_Q 17               
 #define FIX_F (1 << FIX_Q)      
 #define FIX_MIN_INT (-FIX_MAX_INT)      
 #define FIX_MAX_INT ((1 << FIX_P) - 1) 

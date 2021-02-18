@@ -108,8 +108,8 @@ thread_init (void)
 		int i = 0;
     for(; i <= PRI_MAX; i++)
       list_init (&mlfqs_ready_list[i]);
-    ready_threads = 0;
   }
+	ready_threads = 0;
 	initial_thread->nice = fp_int (0);
   initial_thread->recent_cpu = fp_int (0);
   //change2
@@ -145,7 +145,7 @@ thread_tick (void)
 {
   struct thread *t = thread_current ();
 	//change2
-	if(thread_mlfqs)
+	if(1)
 	{
 		t->recent_cpu = fp_add(t->recent_cpu, fp_int(1));
 		if(timer_ticks() % 4 == 0)
@@ -158,6 +158,9 @@ thread_tick (void)
   	}
 		if(timer_ticks() % TIMER_FREQ == 0)
 		{
+			/* ready_threads = list_size(&ready_list);
+			if(thread_current() != idle_thread)
+				ready_threads = ready_threads +  1; */
   		load_avg = fp_add (fp_unscale (fp_scale (load_avg, 59), 60), fp_frac(ready_threads, 60));
     	struct list_elem *e;
     	for (e = list_begin (&all_list); e != list_end (&all_list); e = list_next (e))
@@ -173,8 +176,16 @@ thread_tick (void)
       	  curr->priority = PRI_MIN;
       	if(curr->status == THREAD_READY)
 				{
-      		list_remove (&curr->elem);
-      	  list_push_back (&mlfqs_ready_list[curr->priority], &curr->elem);
+					if(thread_mlfqs)
+					{
+	      		list_remove (&curr->elem);
+	      	  list_push_back (&mlfqs_ready_list[curr->priority], &curr->elem);
+					}
+					else
+					{
+						list_remove (&curr->elem);
+	      	  list_insert_ordered (&ready_list, &curr->elem, compare_priority, NULL);
+					}
       	}
     	}  
   	}
@@ -331,7 +342,7 @@ thread_block (void)
 
   thread_current ()->status = THREAD_BLOCKED;
 	//change2
-	if(running_thread() != idle_thread && thread_mlfqs)
+	if(running_thread() != idle_thread)
 		ready_threads = ready_threads - 1;
 	//change2
   schedule ();
@@ -360,7 +371,7 @@ thread_unblock (struct thread *t)
 		list_push_back (&mlfqs_ready_list[t->priority], &t->elem);
 	else
 		list_insert_ordered (&ready_list, &t->elem, compare_priority, NULL);
-	if (t != idle_thread && thread_mlfqs)
+	if (t != idle_thread)
 		ready_threads = ready_threads + 1;
 	//change2
   t->status = THREAD_READY;
@@ -493,7 +504,9 @@ thread_get_priority (void)
 void
 thread_set_nice (int nice UNUSED) 
 {
-  thread_current()-> nice = fp_int(nice);
+	struct thread *curr = thread_current();
+  curr-> nice = fp_int(nice);
+	curr->priority = fp_trunc (fp_sub (fp_int (PRI_MAX), fp_add (fp_unscale (curr->recent_cpu, 4), fp_scale (curr->nice, 2))));
 }
 
 /* Returns the current thread's nice value. */

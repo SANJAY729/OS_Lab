@@ -145,5 +145,11 @@ int thread_get_load_avg (void);
 void thread_sleep(int64_t); //change
 void thread_wake(int64_t);  //change
 bool compare_wake_up_tick(const struct list_elem *, const struct list_elem *, void *); //change
-bool compare_priority(const struct list_elem *, const struct list_elem *, void *); //change2
+
+//change2
+bool compare_priority(const struct list_elem *, const struct list_elem *, void *);
+void thread_tick_update_priority(struct thread *t);
+void thread_tick_update_load_avg(void);
+void thread_tick_update_recent_cpu(struct thread *curr);
+//change2
 #endif /* threads/thread.h */

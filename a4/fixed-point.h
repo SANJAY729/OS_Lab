@@ -9,9 +9,9 @@
 #define FIX_MAX_INT ((1 << FIX_P) - 1) 
 
 typedef struct
-  {
-    int f;
-  }
+{
+  int f;
+}
 fixed_point;
 
 //storing f in struct

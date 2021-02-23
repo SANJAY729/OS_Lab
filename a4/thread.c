@@ -21,7 +21,7 @@
    Used to detect stack overflow.  See the big comment at the top
    of thread.h for details. */
 #define THREAD_MAGIC 0xcd6abf4b
-
+#define INT_MAX 10000000
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running. */
 static struct list ready_list;
@@ -30,6 +30,8 @@ static struct list ready_list;
    when they are first scheduled and removed when they exit. */
 static struct list all_list;
 static struct list sleeping_thread_list; //change
+int64_t next_wake_up = INT_MAX; //change2
+static struct thread *thread_waker; //change2
 /* Idle thread. */
 static struct thread *idle_thread;
 
@@ -136,6 +138,9 @@ thread_start (void)
 
   /* Wait for the idle thread to initialize idle_thread. */
   sema_down (&idle_started);
+  //change2
+  thread_create ("thread_waker", PRI_MAX, wake_up_thread, NULL);
+  //change2
 }
 
 /* Called by the timer interrupt handler at each timer tick.
@@ -214,6 +219,12 @@ thread_tick (void)
   /* Enforce preemption. */
   if (++thread_ticks >= TIME_SLICE)
     intr_yield_on_return ();
+  //change2
+  if (timer_ticks () == next_wake_up){
+    thread_unblock(thread_waker);
+		intr_yield_on_return ();
+	}
+  //change2
 }
 
 //change2
@@ -257,11 +268,16 @@ void thread_sleep(int64_t ticks)
   enum intr_level old_level = intr_disable ();
   thread_current() -> wake_up_tick = timer_ticks () + ticks;
   list_insert_ordered (&sleeping_thread_list, &thread_current ()->elem, compare_wake_up_tick, NULL);
+  
+  //change2
+  if(next_wake_up > timer_ticks() + ticks)
+    next_wake_up = timer_ticks() + ticks;
+  //change2
   thread_block ();
   intr_set_level (old_level);
 }
-
-void thread_wake(int64_t ticks)
+//change2 
+/*void thread_wake(int64_t ticks)
 {
   struct list_elem *e;
   for (e = list_begin (&sleeping_thread_list); e != list_end (&sleeping_thread_list); ) {
@@ -273,8 +289,30 @@ void thread_wake(int64_t ticks)
     else
       break;
   }
+}*/
+void wake_up_thread (void)
+{
+  thread_waker = thread_current(); 
+  for(;;){
+    struct list_elem *e;
+    for (e = list_begin (&sleeping_thread_list); e != list_end (&sleeping_thread_list); ) {
+      struct thread *temp = list_entry (e, struct thread, elem);      
+      if (next_wake_up >= temp->wake_up_tick) {
+        e = list_remove (e);
+        thread_unblock (temp);
+      }
+      else {
+        next_wake_up = temp->wake_up_tick;
+        break;
+      }
+    }
+    if(list_empty(&sleeping_thread_list))
+      next_wake_up = INT_MAX;
+    intr_disable();
+    thread_block();
+  }
 }
-
+//change2
 bool 
 compare_wake_up_tick(const struct list_elem * elem1, const struct list_elem * elem2, void * _)
 {
@@ -360,10 +398,9 @@ thread_create (const char *name, int priority,
 
   /* Add to run queue. */
   thread_unblock (t);
-	//change2
-	if(priority > running_thread()->priority)
-		thread_yield();
-	//change2
+	if (t->priority > running_thread()->priority) 
+		if(!intr_context()) 
+			thread_yield();
   return tid;
 }
 
@@ -414,6 +451,8 @@ thread_unblock (struct thread *t)
 		ready_threads = ready_threads + 1;
 	//change2
   t->status = THREAD_READY;
+	//if (t->priority > thread_current()->priority)
+		//thread_yield();
   intr_set_level (old_level);
 
 }
@@ -554,6 +593,10 @@ thread_set_nice (int nice UNUSED)
 	struct thread *curr = thread_current();
   curr-> nice = fp_int(nice);
 	int new_priority = fp_trunc (fp_sub (fp_int (PRI_MAX), fp_add (fp_unscale (curr->recent_cpu, 4), fp_scale (curr->nice, 2))));
+  if(new_priority > PRI_MAX)
+  	new_priority = PRI_MAX;
+  else if(new_priority < PRI_MIN)
+    new_priority = PRI_MIN;
 	if(new_priority < curr->priority)
 	{
 		curr->priority = new_priority;
@@ -670,11 +713,20 @@ init_thread (struct thread *t, const char *name, int priority)
   t->status = THREAD_BLOCKED;
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
-  t->priority = priority;
   t->magic = THREAD_MAGIC;
 	//change2
 	t->nice = running_thread ()-> nice;
   t->recent_cpu = running_thread()-> recent_cpu;
+	if (thread_mlfqs)
+	{
+		t->priority = fp_trunc (fp_sub (fp_int (PRI_MAX), fp_add (fp_unscale (t->recent_cpu, 4), fp_scale (t->nice, 2))));
+  	if(t->priority > PRI_MAX)
+  		t->priority = PRI_MAX;
+  	else if(t->priority < PRI_MIN)
+    	t->priority = PRI_MIN;
+	}
+	else
+  	t->priority = priority;	
 	//change2
   list_push_back (&all_list, &t->allelem);
 }

@@ -144,6 +144,7 @@ int thread_get_load_avg (void);
 
 void thread_sleep(int64_t); //change
 void thread_wake(int64_t);  //change
+void wake_up_thread(void); //change2
 bool compare_wake_up_tick(const struct list_elem *, const struct list_elem *, void *); //change
 
 //change2

@@ -179,7 +179,7 @@ timer_interrupt (struct intr_frame *args UNUSED)
   ticks++;
   thread_tick ();
   //change
-  thread_wake(ticks);
+  //thread_wake(ticks); //change2 removed for a4-p1
   //change
 }
 

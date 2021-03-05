@@ -123,7 +123,6 @@ void print(job x) {
     cout<<"PRIORITY "<<x.priority<<endl;
     cout<<"PRODUCER NUMBER "<<x.producer_number<<endl;
     cout<<"COMPUTE TIME "<<x.compute_time<<endl;
-    cout<<"###########################"<<endl;
 }
 
 void lag(int time) {
@@ -141,7 +140,7 @@ void produce_job(data* jobs_info, int producer_number, int process_id, int total
         }
         if (jobs_info->size < max_queue_size) {
             job x = make_job(producer_number,process_id);
-            cout<<"JOB PRODUCED"<<endl;
+            cout<<"***JOB PRODUCED***"<<endl;
             print(x);
             jobs_info->job_created++;
             insert_job(jobs_info,x);
@@ -161,7 +160,7 @@ void consume_job(data* jobs_info, int producer_number, int process_id, int total
         }
         if (jobs_info->size > 0) {
             job x = delete_job(jobs_info);
-            cout<<"JOB CONSUMED"<<endl;
+            cout<<"***JOB CONSUMED***"<<endl;
             print(x);
             lag(x.compute_time);
             jobs_info->job_completed++;
@@ -211,7 +210,6 @@ int main() {
             exit(0);
         }
     }
-
     while(1) {
         lag(2);
         pthread_mutex_lock(&jobs_info->lock);
@@ -224,5 +222,6 @@ int main() {
         }
         pthread_mutex_unlock(&jobs_info->lock);
     }
+    cout<<"i am done"<<endl;
     return 0;
 }

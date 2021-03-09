@@ -52,67 +52,44 @@ data initialize() {
 }
 
 void insert_job(data* jobs_info, job x) {
-    jobs_info->size++;
-    int i = jobs_info->size;
-    (jobs_info->job_queue)[i] = x;
-    while (i > 1) {
-        if((jobs_info->job_queue)[i].priority > (jobs_info->job_queue)[i/2].priority) {
-			job temp = (jobs_info->job_queue)[i];
-			(jobs_info->job_queue)[i] = (jobs_info->job_queue)[i/2];
-			(jobs_info->job_queue)[i/2] = temp;
-			i/=2;
-		}
-		else break;
+    jobs_info->size = jobs_info->size + 1;
+    int i  = jobs_info->size - 1;
+    jobs_info->job_queue[i] = x;
+    while (i != 0 && jobs_info->job_queue[i].priority > jobs_info->job_queue[(i - 1)/2].priority) {
+        job temp = jobs_info->job_queue[i];
+        jobs_info->job_queue[i] = jobs_info->job_queue[(i - 1)/2];
+        jobs_info->job_queue[(i - 1)/2] = temp;
+        i = (i - 1)/2;
     }
     return;
 }
 
-job delete_job(data* jobs_info) {
-    jobs_info->size--;
-    if (jobs_info->size == 0)
-        return jobs_info->job_queue[1];
-    job temp = jobs_info->job_queue[1];
-    jobs_info->job_queue[1] = jobs_info->job_queue[jobs_info->size + 1];
-    int i = 1;
-    while (i < jobs_info->size) {
-        if (2 * i > jobs_info->size)
-            break;
-		if ((jobs_info->job_queue)[i].priority > (jobs_info->job_queue)[2 * i].priority) {
-			if (2 * i + 1 > jobs_info->size)
-                break;
-			if ((jobs_info->job_queue)[i].priority > (jobs_info->job_queue)[2 * i + 1].priority)
-                break;
-			else{
-				job temp2 = (jobs_info->job_queue)[2 * i + 1];
-				(jobs_info->job_queue)[2 * i+ 1] = (jobs_info->job_queue)[i];
-				(jobs_info->job_queue)[i] = temp2;
-				i = 2 * i + 1;
-			}
-		}
-		else {
-			if ((jobs_info->job_queue)[i].priority > (jobs_info->job_queue)[2 * i + 1].priority) {
-				job temp2 = (jobs_info->job_queue)[2 * i];
-				(jobs_info->job_queue)[2 * i] = (jobs_info->job_queue)[i];
-				(jobs_info->job_queue)[i] = temp2;
-				i = 2 * i;
-			}
-			else {
-				if ((jobs_info->job_queue)[2 * i].priority > (jobs_info->job_queue)[2 * i + 1].priority) {
-					job temp2 = (jobs_info->job_queue)[2 * i];
-					(jobs_info->job_queue)[2 * i] = (jobs_info->job_queue)[i];
-					(jobs_info->job_queue)[i] = temp2;
-					i = 2 * i;
-				}
-				else {
-					job temp2 = (jobs_info->job_queue)[2 * i + 1];
-					(jobs_info->job_queue)[2 * i + 1] = (jobs_info->job_queue)[i];
-					(jobs_info->job_queue)[i] = temp2;
-					i = 2 * i + 1;
-				}
-			}
-		}
+void heapify(data* jobs_info, int i){
+    int l = 2 * i + 1;
+    int r = 2 * i + 2;
+    int max = i;
+    if (r < jobs_info->size && jobs_info->job_queue[i].priority < jobs_info->job_queue[r].priority)
+        max = r;
+    if (l < jobs_info->size && jobs_info->job_queue[max].priority < jobs_info->job_queue[l].priority)
+        max = l;
+    if (max != i){
+        job temp = jobs_info->job_queue[max];
+        jobs_info->job_queue[max] = jobs_info->job_queue[i];
+        jobs_info->job_queue[i] = temp;
+        heapify(jobs_info,max);
     }
-    return temp;
+}
+
+job delete_job(data* jobs_info) {
+    if (jobs_info->size == 1){
+        jobs_info->size = 0;
+        return jobs_info->job_queue[0];
+    }
+    job root = jobs_info->job_queue[0];
+    jobs_info->job_queue[0] = jobs_info->job_queue[jobs_info->size - 1];
+    jobs_info->size = jobs_info->size - 1;
+    heapify(jobs_info,0);
+    return root;
 }
 
 job make_job(int producer_number, int thread_id) {

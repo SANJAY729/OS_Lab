@@ -102,18 +102,13 @@ void print(job x) {
     cout<<"COMPUTE TIME "<<x.compute_time<<endl;
 }
 
-void lag(int time) {
-    clock_t start = clock();
-    while(clock() < start + time * CLOCKS_PER_SEC);
-}
-
 void produce_job(data* jobs_info, int producer_number, int process_id, int total_jobs) {
     while(1) {
-        lag(rand()%4);
+        sleep(rand()%4);
         pthread_mutex_lock(&jobs_info->lock);
         if (jobs_info->job_created >= total_jobs) {
             pthread_mutex_unlock(&jobs_info->lock);
-            break;
+            continue;
         }
         if (jobs_info->size < max_queue_size) {
             job x = make_job(producer_number,process_id);
@@ -129,11 +124,11 @@ void produce_job(data* jobs_info, int producer_number, int process_id, int total
 
 void consume_job(data* jobs_info, int consumer_number, int process_id, int total_jobs) {
     while(1) {
-        lag(rand()%4);
+        sleep(rand()%4);
         pthread_mutex_lock(&jobs_info->lock);
         if (jobs_info->job_completed >= total_jobs) {
             pthread_mutex_unlock(&jobs_info->lock);
-            break;
+            continue;
         }
         if (jobs_info->size > 0) {
             job x = delete_job(jobs_info);
@@ -141,8 +136,10 @@ void consume_job(data* jobs_info, int consumer_number, int process_id, int total
             cout<<"CONSUMER NUMBER "<<consumer_number<<endl;
             cout<<"CONSUMER PROCESS ID "<<process_id<<endl;
             print(x);
-            lag(x.compute_time);
             jobs_info->job_completed++;
+            pthread_mutex_unlock(&jobs_info->lock);
+            sleep(x.compute_time);
+            continue;
         }
         pthread_mutex_unlock(&jobs_info->lock);
     }
@@ -164,35 +161,36 @@ int main() {
     }
     data* jobs_info = initialize(shmid);
     auto begin = std::chrono::high_resolution_clock::now();
-    pid_t pid;
+    pid_t pid[NP + NC + 1]; //using as indexed from 1
     for (int i = 1; i<=NP; i++) {
-        pid = fork();
-        if (pid < 0) {
+        pid[i]= fork();
+        if (pid[i] < 0) {
             cout<<"lol2"<<endl;
             exit(0);
         }
-        else if (pid == 0) { //inside child process
+        else if (pid[i] == 0) { //inside child process
             srand(time(0) ^ i*2);
             produce_job(jobs_info,i,getpid(),total_jobs);
             exit(0);
         }
     }
     for (int i = 1; i<=NC; i++) {
-        pid = fork();
-        if (pid < 0) {
+        pid[NP + i] = fork();
+        if (pid[NP + i] < 0) {
             cout<<"lol3"<<endl;
             exit(0);
         }
-        else if (pid == 0) { //inside child process
+        else if (pid[NP + i] == 0) { //inside child process
             srand(time(0) ^ i*3);
             consume_job(jobs_info,i,getpid(),total_jobs);
             exit(0);
         }
     }
     while(1) {
-        lag(2);
         pthread_mutex_lock(&jobs_info->lock);
         if (jobs_info->job_created == jobs_info->job_completed && jobs_info->job_created == total_jobs) {
+            for (int i = 1; i <= NP + NC; i++) 
+                kill(pid[i], SIGKILL);
             auto end = std::chrono::high_resolution_clock::now();
             auto time_spent = std::chrono::duration_cast<std::chrono::microseconds>(end-begin);
             cout<<"Time spent in seconds is "<<time_spent.count()/1000000<<endl;

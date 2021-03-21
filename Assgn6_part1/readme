@@ -1,0 +1,22 @@
+process.c , process.h, syscall.c, syscall.h in userprog
+timer.c, shutdown.c in devices
+threads.c, threads.h in threads
+hello.c in examples
+
+make in threads
+make in userprog
+make in examples
+
+in userprog...
+
+cd build
+pintos-mkdisk filesys.dsk --filesys-size=2
+pintos -f -q
+pintos -p ../../examples/echo -a echo -- -q
+pintos -q run 'echo x'
+
+pintos -p ../../examples/hello -a hello -- -q
+pintos -q run 'hello x'
+
+
+After pintos -f -q if u r getting error as in teams follwo that stackoveerflow link.

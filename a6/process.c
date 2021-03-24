@@ -53,9 +53,10 @@ process_execute (const char *file_name)
     palloc_free_page (fn_copy); 
   	return tid;
 	}
+
 	//change3
-	sema_down(&thread_current()->production_sem);
-	if (thread_current()->production_flag == false){
+	sema_down(&thread_current()->load_sema);
+	if (thread_current()->load_flag == false){
     struct child * child = get_child(tid,thread_current());
     if (child!= NULL){
       list_remove(&child->elem);
@@ -64,6 +65,7 @@ process_execute (const char *file_name)
     return TID_ERROR;
   }
 	//change3
+
   return tid;
 }
 
@@ -85,16 +87,18 @@ start_process (void *file_name_)
 
   /* If load failed, quit. */
   palloc_free_page (file_name);
+
 	//change3
   if (!success){
 		thread_current()->exit_code = -1;
-    thread_current()->parent->production_flag = false;
-    sema_up(&thread_current()->parent->production_sem);
+    thread_current()->parent->load_flag = false;
+    sema_up(&thread_current()->parent->load_sema);
     thread_exit ();
 	}
-	thread_current()->parent->production_flag = true;
-  sema_up(&thread_current()->parent->production_sem);
+	thread_current()->parent->load_flag = true;
+  sema_up(&thread_current()->parent->load_sema);
 	//change3
+
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
      threads/intr-stubs.S).  Because intr_exit takes all of its
@@ -123,10 +127,10 @@ process_wait (tid_t child_tid UNUSED)
   if(child == NULL){
     return -1;
   }
-  thread_current()->waiton_child = child_tid;
-  if (child->used != 1)
-    sema_down(&thread_current()->child_sem);
-  ASSERT (child->used == 1);
+  thread_current()->waiting_for_child_id = child_tid;
+  if (child->completed != 1)
+    sema_down(&thread_current()->child_sema);
+  ASSERT (child->completed == 1);
   int ret = child->ret_val;
   list_remove(&child->elem);
   free(child);
@@ -140,13 +144,14 @@ process_exit (void)
 {
   struct thread *cur = thread_current ();
   uint32_t *pd;
+
 	//change3
 	printf("%s: exit(%d)\n",cur->name,cur->exit_code);
 	lock_acquire(&big_lock);
   if (thread_current()->file != NULL)
     file_close(thread_current()->file);
   lock_release(&big_lock);
-	while(!list_empty(&thread_current()->children)){
+	while (!list_empty(&thread_current()->children)){
     struct list_elem * e = list_pop_front(&thread_current()->children);
     struct child * child = list_entry(e,struct child,elem);
     list_remove(e);
@@ -154,6 +159,7 @@ process_exit (void)
   }
   ASSERT(list_empty(&thread_current()->children));
 	//change3
+
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
   pd = cur->pagedir;
@@ -492,7 +498,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 /* Create a minimal stack by mapping a zeroed page at the top of
    user virtual memory. */
 static bool
-setup_stack (void **esp, char * file_name) 
+setup_stack (void **esp, char * file_name)
 {
   uint8_t *kpage;
   bool success = false;
@@ -506,6 +512,7 @@ setup_stack (void **esp, char * file_name)
       else
         palloc_free_page (kpage);
     }
+
 	//change3
 	char * token;
   char * save_ptr;
@@ -527,7 +534,7 @@ setup_stack (void **esp, char * file_name)
     memcpy(*esp,token,strlen(token) + 1);
   }
   argv[argc] = 0;
-  int i = 0;
+  int i;
   for (i = argc; i >= 0; i--){
     *esp -= sizeof(char*);
     memcpy(*esp,&argv[i],sizeof(char*));
@@ -535,7 +542,7 @@ setup_stack (void **esp, char * file_name)
   
   //pushing argv
   token = *esp;
-  *esp-=sizeof(char**);
+  *esp -= sizeof(char**);
   memcpy(*esp,&token,sizeof(char**));
   
   // Pushing argc
@@ -569,13 +576,12 @@ install_page (void *upage, void *kpage, bool writable)
   return (pagedir_get_page (t->pagedir, upage) == NULL
           && pagedir_set_page (t->pagedir, upage, kpage, writable));
 }
+
 //change3
 struct child * get_child(tid_t id,struct thread * curr)
 {
   struct list_elem * e;
-  for (e=list_begin(&curr->children);
-    e!=list_end(&curr->children);e=list_next(e))
-  {
+  for (e = list_begin(&curr->children); e != list_end(&curr->children); e = list_next(e)){
     struct child * child = list_entry(e,struct child,elem);
     if(child->id == id)
       return child;

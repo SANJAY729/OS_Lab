@@ -15,7 +15,6 @@ int wait(tid_t);
 int write (int,const void *, unsigned);
 static void syscall_handler (struct intr_frame *);
 bool valid (void * vaddr);
-void kill (void);
 struct file_desc * get_file(int);
 void
 syscall_init (void) 
@@ -29,38 +28,37 @@ syscall_handler (struct intr_frame *f UNUSED)
 {
   int * p = f->esp;
 	if(!valid (p))
-    kill();
+    exit(-1);
 	int syscall_number = *p;
 	switch (syscall_number){
 		case SYS_EXIT:
-      if(!valid(p+1))
-        kill();
-			exit(*(p+1));
+      if(!valid(p + 1))
+        exit(-1);
+			exit(*(p + 1));
       break;
 
     case SYS_EXEC:
-      if(!valid(p+1) || !valid(*(p+1)))
-        kill();
-      f->eax = exec(*(p+1));
+      if(!valid(p + 1) || !valid(*(p + 1)))
+        exit(-1);
+      f->eax = exec(*(p + 1));
       break;
     
 		case SYS_WAIT:
-      if(!valid(p+1))
-        kill(); 
-      f->eax = wait(*(p+1));
+      if(!valid(p + 1))
+      	exit(-1); 
+      f->eax = wait(*(p + 1));
       break;
 
 		case SYS_WRITE:
-      if (!valid(p+5) || !valid(p+6) || 
-            !valid (p+7)|| !valid(*(p+6)))
-        kill();
-      f->eax = write(*(p+5),*(p+6),*(p+7));
+      if (!valid(p + 5) || !valid(p + 6) || !valid (p + 7)|| !valid(*(p + 6)))
+        exit(-1);
+      f->eax = write(*(p + 5),*(p + 6),*(p + 7));
       break;
     
 		default:
       hex_dump(p,p,64,true);
-      printf("Invalid System Call number\n");
-			kill();      
+      printf("Invalid System Call Number\n");
+			exit(-1);      
 			break;
   }
 }
@@ -71,10 +69,10 @@ void exit (int status)
   if (!list_empty(&parent->children)){
     struct child * child = get_child(thread_current()->tid,parent);
     if (child!=NULL){
-      child->ret_val=status;
-      child->used = 1;
-      if (thread_current()->parent->waiton_child == thread_current()->tid)
-        sema_up(&thread_current()->parent->child_sem);   
+      child->ret_val = status;
+      child->completed = 1;
+      if (thread_current()->parent->waiting_for_child_id == thread_current()->tid)
+        sema_up(&thread_current()->parent->child_sema);   
     }
   }
   thread_exit();
@@ -105,9 +103,4 @@ int write (int fd, const void *buffer, unsigned length)
 bool valid(void * vaddr)
 {
   return (is_user_vaddr(vaddr) && pagedir_get_page(thread_current()->pagedir,vaddr)!=NULL);
-}
-
-void kill () 
-{
-  exit(-1); 
 }

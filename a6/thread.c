@@ -375,7 +375,7 @@ thread_create (const char *name, int priority,
   t->parent = thread_current();
   struct child * child = malloc(sizeof(struct child));
   child->id = tid;
-  child->used = 0;
+  child->completed = 0;
   list_push_back(&thread_current()->children,&child->elem);
   //change3
 
@@ -731,8 +731,8 @@ init_thread (struct thread *t, const char *name, int priority)
   list_push_back (&all_list, &t->allelem);
   //change3
   list_init(&t->children);
-  sema_init(&t->production_sem,0);
-  sema_init(&t->child_sem,0);
+  sema_init(&t->load_sema,0);
+  sema_init(&t->child_sema,0);
   //change3
 }
 

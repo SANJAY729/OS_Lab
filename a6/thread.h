@@ -98,15 +98,16 @@ struct thread
     int64_t wake_up_tick;               //change
     fixed_point nice;                   //change2
     fixed_point recent_cpu;             //change2
+
 		//change3
 		int exit_code;
     struct list children;
     struct thread * parent;
-    bool production_flag;
-    struct semaphore production_sem;
+    bool load_flag;
+    struct semaphore load_sema;
     struct file * file;
-    struct semaphore child_sem;
-    tid_t waiton_child;
+    struct semaphore child_sema;
+    tid_t waiting_for_child_id;
 		//change3
   };
 

@@ -12,7 +12,7 @@ void process_activate (void);
 struct child{
   tid_t id;
   int ret_val;
-  int used;
+  int completed;
   struct list_elem elem;
 };
 //change3

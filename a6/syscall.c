@@ -102,5 +102,10 @@ int write (int fd, const void *buffer, unsigned length)
 
 bool valid(void * vaddr)
 {
-  return (is_user_vaddr(vaddr) && pagedir_get_page(thread_current()->pagedir,vaddr)!=NULL);
+  //return (is_user_vaddr(vaddr) && pagedir_get_page(thread_current()->pagedir,vaddr)!=NULL);
+	if (!is_user_vaddr(vaddr))
+		return false;
+	if (!(pagedir_get_page(thread_current()->pagedir,vaddr)!=NULL))
+		return false;
+	return true;
 }
